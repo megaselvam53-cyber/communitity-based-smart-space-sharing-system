@@ -69,4 +69,7 @@ Backend integration (Node.js, Express.js, MongoDB) is planned for future develop
 
 👨‍💻 Developed By
 
-- Vimal Raj & Team
+- Mega.C.S
+- Gokulalakshmi.R
+- Hemalatha.B
+- Prisha.G

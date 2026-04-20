@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SpotConnect - Welcome</title>
+
+<link rel="stylesheet" href="style.css"/>
+
+</head>
+
+<body>
+  <video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+  <!-- ✅ Top Black box -->
+  <div class="top-pill">
+    <div class="brand">SpotConnect</div>
+
+    <button class="hamburger" id="menuBtn" aria-label="menu">
+      <span style="display:flex;flex-direction:column;gap:4px;">
+        <i></i><i></i><i></i>
+      </span>
+    </button>
+  </div>
+
+  <!-- ✅ Center card -->
+  <div class="card">
+    <h2>Spot Connect</h2>
+    <div class="subtitle">
+      Find nearby parking<br>
+      • Book easily<br>
+      • Safe & simple
+    </div>
+    <button class="btn btn-primary" onclick="location.href='role.html'">GET STARTED</button>
+  </div>
+
+  <!-- overlay + menu -->
+  <div class="overlay" id="overlay"></div>
+
+  <div class="menu" id="menu">
+    <div class="menuHead">
+      <h3>Menu</h3>
+      <button class="closeBtn" id="closeBtn">X</button>
+    </div>
+
+    <button class="menuItem" data-key="app">About SpotConnect</button>
+    <button class="menuItem" data-key="user">For user </button>
+    <button class="menuItem" data-key="owner">For Owner</button>
+    <button class="menuItem" data-key="why">Why Choose SpotConnect?</button>
+
+    <div class="infoBox" id="infoBox"></div>
+  </div>
+
+<script>
+  const menuBtn  = document.getElementById("menuBtn");
+  const overlay  = document.getElementById("overlay");
+  const menu     = document.getElementById("menu");
+  const closeBtn = document.getElementById("closeBtn");
+  const infoBox  = document.getElementById("infoBox");
+
+  const content = {
+    app: `
+      <b>About SpotConnect</b><br>
+      SpotConnect is a smart and simple parking solution.Users can quickly find nearby parking spaces and book in seconds.Owners can list their unused parking spots and earn money easily.
+
+      Safe,Fast and Convenient.
+    `,
+    user: `
+      <b>For user </b><br>
+      • Find nearby parking instantly<br>
+      • Select date, time and vehicle type<br>
+      • Book parking in just a few taps<br>
+      • View booking history anytime<br>
+      • Get smooth and secure confirmation, <br>
+      Parking made easy
+    `,
+    owner: `
+      <b>For Owners</b><br>
+      • Add your parking space with details & photos<br>
+      • Set price per hour<br>
+      • Manage bookings (Start / End)<br>
+      • Track payment status<br>
+      • Earn from your unused space,<br>
+      Turn empty space into income.
+      
+    `,
+    why: `
+      <b>Why Choose SpotConnect?</b><br>
+      • Saves time searching for parking<br>
+      • Reduces traffic congestion<br>
+      • Helps owners earn extra income<br>
+      • Simple and user-friendly interface<br>
+      • Fast and secure booking system and<br>
+      Smart parking for smart cities.
+    `
+  };
+
+  function openMenu(){
+    menu.classList.add("open");
+    overlay.classList.add("show");
+  }
+  function closeMenu(){
+    menu.classList.remove("open");
+    overlay.classList.remove("show");
+    infoBox.classList.remove("show");
+    infoBox.innerHTML = "";
+  }
+
+  menuBtn.addEventListener("click", openMenu);
+  closeBtn.addEventListener("click", closeMenu);
+  overlay.addEventListener("click", closeMenu);
+
+  document.querySelectorAll(".menuItem").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.dataset.key;
+      infoBox.innerHTML = content[key] || "";
+      infoBox.classList.add("show");
+    });
+  });
+</script>
+
+</body>
+</html>

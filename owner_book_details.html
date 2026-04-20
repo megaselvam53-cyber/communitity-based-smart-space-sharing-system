@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Owner - Book Details</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <style>
+    .tag{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;margin-left:6px}
+    .t-pending{background:#fff3cd}
+    .t-started{background:#dbeafe}
+    .t-ended{background:#ede9fe}
+    .t-paid{background:#dcfce7}
+    .t-notpaid{background:#fee2e2}
+    .t-completed{background:#e5e7eb}
+    .rowbtn{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  </style>
+</head>
+
+<body>
+
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+<div class="page-bg">
+  <div class="card-box">
+
+    <div class="title">Owner - Book Details</div>
+
+    <!-- ✅ CENTER OWNER NAME -->
+    <div id="ownName" style="text-align:center; font-weight:700; margin-bottom:10px;"></div>
+
+    <div id="list"></div>
+
+    <!-- ✅ BACK BUTTON CORRECT PLACE -->
+    <button class="btn linkbtn"
+      onclick="location.href='owner_dashboard.html'"
+      style="margin-top:12px;">
+      Back
+    </button>
+
+  </div>
+</div>
+
+<script>
+// ================= STORAGE =================
+function getOwner(){
+  return JSON.parse(localStorage.getItem("ownerProfile") || "null");
+}
+
+function getBookings(){
+  return JSON.parse(localStorage.getItem("userBookings") || "[]");
+}
+
+function saveBookings(b){
+  localStorage.setItem("userBookings", JSON.stringify(b));
+}
+
+// ================= TAG =================
+function tagHTML(b){
+  const st = b.status || "PENDING";
+  const pay = b.paymentStatus || "NOT_PAID";
+
+  let t="";
+  if(st==="PENDING") t+=`<span class="tag t-pending">PENDING</span>`;
+  if(st==="STARTED") t+=`<span class="tag t-started">STARTED</span>`;
+  if(st==="ENDED") t+=`<span class="tag t-ended">ENDED</span>`;
+  if(st==="COMPLETED") t+=`<span class="tag t-completed">COMPLETED</span>`;
+  if(pay==="PAID") t+=`<span class="tag t-paid">PAID</span>`;
+  if(pay==="NOT_PAID") t+=`<span class="tag t-notpaid">NOT PAID</span>`;
+  return t;
+}
+
+// ================= RENDER =================
+function render(){
+  const owner = getOwner();
+  document.getElementById("ownName").innerText = owner?.name || "Owner";
+
+  let bookings = getBookings();
+
+  if(owner?.name){
+    bookings = bookings.filter(b => b.ownerName === owner.name);
+  }
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  bookings.forEach(b=>{
+    const div = document.createElement("div");
+    div.className = "section";
+
+    div.innerHTML = `
+      <h3>${b.title} ${tagHTML(b)}</h3>
+      <p>Booking ID: ${b.bookingId}</p>
+      <p>Date: ${b.date}</p>
+      <p>Vehicle: ${b.vehicle}</p>
+
+      ${b.startTime && b.startTime !== "" ? `<p><b>Start:</b> ${b.startTime}</p>` : ""}
+      ${b.endTime && b.endTime !== "" ? `<p><b>End:</b> ${b.endTime}</p>` : ""}
+
+      <!-- ✅ EMPTY ROW (NO END BUTTON) -->
+      <div class="rowbtn"></div>
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+// ================= END PARKING (UNCHANGED LOGIC) =================
+function endParking(id){
+  let bookings = getBookings();
+  const i = bookings.findIndex(b => b.bookingId == id);
+
+  if(i === -1) return;
+
+  if(bookings[i].status !== "STARTED"){
+    alert("Start parking first ❌");
+    return;
+  }
+
+  bookings[i].status = "ENDED";
+  bookings[i].endTime = new Date().toLocaleTimeString();
+
+  saveBookings(bookings);
+  render();
+}
+
+// ================= INIT =================
+render();
+
+</script>
+
+</body>
+</html>

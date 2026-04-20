@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Owner Ratings</title>
+<link rel="stylesheet" href="style.css"/>
+
+<style>
+.star{color:gold;}
+</style>
+</head>
+
+<body>
+
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+<div class="page-bg">
+<div class="card-box">
+
+<div class="title">My Ratings</div>
+
+<div id="list"></div>
+
+<button class="btn linkbtn"
+onclick="location.href='owner_dashboard.html'">
+Back
+</button>
+
+</div>
+</div>
+
+<script>
+
+// ===== STORAGE =====
+function getSpaces(){
+  return JSON.parse(localStorage.getItem("ownerSpaces") || "[]");
+}
+
+function getRatings(){
+  return JSON.parse(localStorage.getItem("parkingRatings") || "[]");
+}
+
+function getOwner(){
+  return JSON.parse(localStorage.getItem("ownerProfile") || "null");
+}
+
+// ===== RENDER =====
+function render(){
+
+  const owner = getOwner();
+  const spaces = getSpaces();
+  const ratings = getRatings();
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  // owner spaces மட்டும் filter
+  const mySpaces = spaces.filter(s => s.ownerName === owner.name);
+
+  if(mySpaces.length === 0){
+    list.innerHTML = `<div class="section">No spaces found</div>`;
+    return;
+  }
+
+  mySpaces.forEach(space => {
+
+    const myRatings = ratings.filter(r => 
+      String(r.parkingId) === String(space.id)
+    );
+
+    let avg = 0;
+
+    if(myRatings.length > 0){
+      const total = myRatings.reduce((sum, r)=> sum + Number(r.rating || 0),0);
+      avg = (total / myRatings.length).toFixed(1);
+    }
+
+    const div = document.createElement("div");
+    div.className = "section";
+
+    div.innerHTML = `
+      <h3>${space.title}</h3>
+      <p><b>Average Rating:</b> ${avg || "No ratings"} ⭐</p>
+      <p><b>Total Reviews:</b> ${myRatings.length}</p>
+
+      ${myRatings.map(r => `
+        <div style="margin-top:8px;padding:6px;border-top:1px solid #ccc;">
+          <div class="star">⭐ ${r.rating}</div>
+          <div>${r.feedback || "No feedback"}</div>
+        </div>
+      `).join("")}
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+render();
+
+</script>
+
+</body>
+</html>

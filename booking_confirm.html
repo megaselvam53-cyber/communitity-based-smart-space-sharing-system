@@ -1,0 +1,211 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Confirm Booking</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <style>
+    .imgbox{
+      width:100%;
+      height:180px;
+      border-radius:12px;
+      overflow:hidden;
+      margin-top:10px;
+      background:#f3f4f6;
+    }
+    .imgbox img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .rowgap{margin-top:12px;}
+  </style>
+</head>
+
+<body>
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+<div class="page-bg">
+  <div class="card-box">
+    <div class="title">Confirm Booking</div>
+
+    <div id="info" class="section"></div>
+
+    <div class="imgbox">
+      <img id="photo" src="https://via.placeholder.com/700x350?text=Parking+Photo">
+    </div>
+
+    <div class="rowgap">
+      <label>Select Vehicle Type</label>
+      <select id="vehicleType"> 
+        <option value="">Select</option>
+        <option value="Bike">Bike</option>
+        <option value="Car">Car</option>
+      </select>
+    </div>
+
+    <div class="confirm-row">
+      <input type="checkbox" id="confirmCheck">
+      <label for="confirmCheck">Confirm Booking</label>
+    </div>
+
+    <button class="btn btn-primary" id="confirmBtn" type="button">
+      Book now
+    </button>
+
+    <div id="msg" class="msg"></div>
+
+    <button class="btn linkbtn" type="button"
+      onclick="location.href='find_parking.html'">
+      Back
+    </button>
+  </div>
+</div>
+
+<script>
+
+// ================= STORAGE =================
+function getSpaces(){
+  return JSON.parse(localStorage.getItem("ownerSpaces") || "[]");
+}
+
+function getBookings(){
+  return JSON.parse(localStorage.getItem("userBookings") || "[]");
+}
+
+function setBooked(id){
+  const bm = JSON.parse(localStorage.getItem("bookedMap") || "{}");
+  bm[id] = true;
+  localStorage.setItem("bookedMap", JSON.stringify(bm));
+}
+
+function showMsg(text, ok=false){
+  const msg = document.getElementById("msg");
+  msg.textContent = text;
+  msg.style.color = ok ? "#16a34a" : "#dc2626";
+}
+
+// ================= GET DATA =================
+const qp = new URLSearchParams(location.search);
+const pid  = qp.get("pid") || localStorage.getItem("selectedParkingId");
+const date = qp.get("date") || localStorage.getItem("selectedDate") || "";
+
+if(pid) localStorage.setItem("selectedParkingId", pid);
+if(date) localStorage.setItem("selectedDate", date);
+
+const spaces = getSpaces();
+const space  = spaces.find(x => String(x.id) === String(pid));
+
+const infoBox = document.getElementById("info");
+const photoEl = document.getElementById("photo");
+const confirmBtn = document.getElementById("confirmBtn");
+const vehicleSel = document.getElementById("vehicleType");
+const confirmCheck = document.getElementById("confirmCheck");
+
+// ================= SHOW DETAILS =================
+if(!space){
+  infoBox.innerHTML = "<b>No parking selected</b>";
+  confirmBtn.disabled = true;
+}else{
+
+  const bookings = getBookings();
+
+  const activeBooking = bookings.find(b =>
+    String(b.parkingId) === String(space.id) &&
+    b.paymentStatus !== "PAID"
+  );
+
+  const isBooked = activeBooking ? true : false;
+
+  infoBox.innerHTML = `
+    <h3>${space.ownerName} - ${space.title}</h3>
+    <p><b>Date:</b> ${date}</p>
+    <p><b>Rate:</b> ₹${space.rate}/hour</p>
+    <p><b>Time:</b> ${space.time || "24/7"}</p>   
+    <p><b>Status:</b> ${isBooked ? "BOOKED" : "AVAILABLE"}</p>
+  `;
+
+  photoEl.src = space.photo || photoEl.src;
+
+  if(isBooked){
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Already Booked";
+  }
+}
+
+// ================= CONFIRM BOOKING =================
+confirmBtn.addEventListener("click", ()=>{
+
+  if(!space){
+    showMsg("Invalid parking!");
+    return;
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  if(date < today){
+    showMsg("Invalid date ❌");
+    return;
+  }
+
+  if(!confirmCheck.checked){
+    showMsg("Please confirm booking!");
+    return;
+  }
+
+  const vehicle = vehicleSel.value;
+  if(!vehicle){
+    showMsg("Select vehicle type!");
+    return;
+  }
+
+  const bookings = getBookings();
+
+  const activeBooking = bookings.find(b =>
+    String(b.parkingId) === String(space.id) &&
+    b.paymentStatus !== "PAID"
+  );
+
+  if(activeBooking){
+    showMsg("Already booked ❌");
+    return;
+  }
+
+  // ❌ confirm popup removed → direct flow
+  showMsg("Processing booking...", true);
+
+  setBooked(space.id);
+
+  const bookingId = "B" + Date.now();
+
+  bookings.push({
+    bookingId,
+    parkingId: space.id,
+    title: space.title,
+    ownerName: space.ownerName,
+    date,
+    vehicle,
+    rate: Number(space.rate),
+    status: "PENDING",
+    paymentStatus: "NOT_PAID",
+    createdAt: Date.now(),
+    rated: false
+  });
+
+  localStorage.setItem("userBookings", JSON.stringify(bookings));
+
+  showMsg("Booking Confirmed ✅", true);
+
+  setTimeout(()=>{
+    location.href = `booking_success.html?bookingId=${bookingId}`;
+  }, 500);
+});
+
+</script>
+
+</body>
+</html>

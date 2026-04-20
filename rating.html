@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Rate Parking</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .stars{
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      margin:18px 0;
+      font-size:34px;
+      cursor:pointer;
+    }
+    .star{
+      opacity:.35;
+      transition:.2s;
+    }
+    .star.active{
+      opacity:1;
+      transform:scale(1.1);
+    }
+    textarea{
+      min-height:100px;
+    }
+    .center{
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+  <video class="bg-video" autoplay muted loop playsinline>
+    <source src="assets/bg.mp4" type="video/mp4">
+  </video>
+
+  <div class="page-bg">
+    <div class="card-box">
+      <div class="title">Rate Parking</div>
+      <div class="subtitle">Share your feedback</div>
+
+      <div id="bookingInfo" class="section"></div>
+
+      <div class="center" style="margin-top:14px;">
+        <b>Select Rating</b>
+      </div>
+
+      <div class="stars" id="stars">
+        <span class="star" data-val="1">⭐</span>
+        <span class="star" data-val="2">⭐</span>
+        <span class="star" data-val="3">⭐</span>
+        <span class="star" data-val="4">⭐</span>
+        <span class="star" data-val="5">⭐</span>
+      </div>
+
+      <label>Feedback</label>
+      <textarea id="feedback" placeholder="Type your feedback..."></textarea>
+
+      <button class="btn btn-primary" id="submitBtn">Submit Rating</button>
+      <button class="btn linkbtn" onclick="location.href='user_bookings.html'">Back</button>
+
+      <div id="msg" class="msg"></div>
+    </div>
+  </div>
+
+<script>
+  function getBookings(){
+    return JSON.parse(localStorage.getItem("userBookings") || "[]");
+  }
+
+  function saveBookings(arr){
+    localStorage.setItem("userBookings", JSON.stringify(arr));
+  }
+
+  function getRatings(){
+    return JSON.parse(localStorage.getItem("parkingRatings") || "[]");
+  }
+
+  function saveRatings(arr){
+    localStorage.setItem("parkingRatings", JSON.stringify(arr));
+  }
+
+  const qp = new URLSearchParams(location.search);
+  const bid = qp.get("bid");
+
+  const bookings = getBookings();
+  const bookingIndex = bookings.findIndex(x => String(x.bookingId) === String(bid));
+  const booking = bookingIndex >= 0 ? bookings[bookingIndex] : null;
+
+  const info = document.getElementById("bookingInfo");
+  const msg = document.getElementById("msg");
+  const stars = [...document.querySelectorAll(".star")];
+
+  let selectedRating = 0;
+
+  if(!booking){
+    info.innerHTML = "<b>Booking not found</b>";
+    document.getElementById("submitBtn").disabled = true;
+  } else {
+
+    info.innerHTML = `
+      <div><b>Parking:</b> ${booking.title || "-"}</div>
+      <div><b>Owner:</b> ${booking.ownerName || "-"}</div>
+      <div><b>Date:</b> ${booking.date || "-"}</div>
+      <div><b>Status:</b> ${booking.status || "-"}</div>
+      <div><b>Payment:</b> ${booking.paymentStatus || "NOT PAID"}</div>
+    `;
+
+    // ✅ IMPORTANT FIX
+    if(booking.status !== "COMPLETED" || booking.paymentStatus !== "PAID"){
+      msg.textContent = "Rating allowed only after payment & completion.";
+      document.getElementById("submitBtn").disabled = true;
+    }
+
+    if(booking.rated){
+      msg.textContent = "You already rated this booking ✅";
+      document.getElementById("submitBtn").disabled = true;
+    }
+  }
+
+  function paintStars(value){
+    stars.forEach(s => {
+      s.classList.toggle("active", Number(s.dataset.val) <= value);
+    });
+  }
+
+  stars.forEach(star => {
+    star.addEventListener("click", () => {
+      selectedRating = Number(star.dataset.val);
+      paintStars(selectedRating);
+    });
+  });
+
+  document.getElementById("submitBtn").addEventListener("click", () => {
+    if(!booking) return;
+
+    const feedback = document.getElementById("feedback").value.trim();
+
+    if(selectedRating < 1){
+      msg.textContent = "Please select rating";
+      return;
+    }
+
+    const ratings = getRatings();
+
+    ratings.push({
+      bookingId: booking.bookingId,
+      parkingId: booking.parkingId,
+      title: booking.title,
+      ownerName: booking.ownerName,
+      rating: selectedRating,
+      feedback: feedback,
+      createdAt: Date.now()
+    });
+
+    saveRatings(ratings);
+
+    bookings[bookingIndex].rated = true;
+    bookings[bookingIndex].userRating = selectedRating;
+    bookings[bookingIndex].userFeedback = feedback;
+
+    saveBookings(bookings);
+
+    msg.textContent = "Rating submitted successfully ✅";
+
+    setTimeout(() => {
+      location.href = "user_bookings.html";
+    }, 900);
+  });
+</script>

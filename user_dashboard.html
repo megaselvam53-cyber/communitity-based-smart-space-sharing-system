@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>User Dashboard</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  
+  <video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+  <div class="page-bg">
+    <div class="card-box">
+      <div class="title">User Dashboard</div>
+      <div class="subtitle" id="welcome"></div>
+
+      <!-- ✅ Profile details TOP -->
+       <div class="section" style="margin-top:12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <h3 style="margin:0;">Profile Details</h3>
+         <button 
+    onclick="location.href='user_details.html?edit=1'"
+    title="Edit Profile"
+    style="border:none;background:transparent;cursor:pointer;font-size:18px;font-weight:900;">
+    ✎
+  </button>
+        </div>
+        <div id="ownerBox" style="margin-top:8px; opacity:0.9;"></div>
+      </div>
+
+      <!-- ✅ Buttons BELOW -->
+      <div class="grid" style="margin-top:12px;">
+        <button class="btn btn-primary" onclick="location.href='user_bookings.html'">View My Bookings</button>
+        <button class="btn btn-primary" onclick="location.href='find_parking.html'">Find Parking</button>
+      </div>
+
+      <button class="btn linkbtn" style="margin-top:12px;" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <script>
+    function loadProfile(){
+      const p = JSON.parse(localStorage.getItem("userProfile") || "null");
+      const box = document.getElementById("ownerBox");
+
+      if(!p){
+        document.getElementById("welcome").textContent = "Welcome!";
+        box.innerHTML = "No profile found";
+        return;
+      }
+
+      document.getElementById("welcome").textContent = `Welcome, ${p.name}`;
+
+      box.innerHTML = `
+        <div><b>Name:</b> ${p.name}</div>
+        <div><b>Email:</b> ${p.email}</div>
+        <div><b>Phone:</b> ${p.phone}</div>
+        <div><b>Address:</b> ${p.address}</div>
+      `;
+    }
+
+    function logout(){
+      location.href = "index.html";
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>

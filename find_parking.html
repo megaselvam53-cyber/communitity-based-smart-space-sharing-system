@@ -1,0 +1,265 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Find Parking</title>
+<link rel="stylesheet" href="style.css"/>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+#map { height:260px; width:100%; border-radius:12px; }
+.msg{margin-top:10px;font-size:14px;}
+</style>
+</head>
+
+<body>
+
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+<div class="page-bg">
+<div class="card-box">
+<div class="title">Find Parking</div>
+
+<label>Enter Location</label>
+<input id="loc" placeholder="Eg: Salem">
+
+<label>Select Date</label>
+<input id="date" type="date">
+
+<button class="btn btn-primary" id="searchBtn">Search</button>
+
+<!-- ✅ MESSAGE BOX -->
+<div id="msg" class="msg"></div>
+
+<div id="mapBox" class="section" style="display:none;margin-top:12px;">
+  <h3>Map</h3>
+  <div id="map"></div>
+</div>
+
+<div id="resultsTitle" class="subtitle" style="display:none;margin-top:10px;">
+  Available Parkings
+</div>
+
+<div id="list" class="grid"></div>
+
+<button class="btn linkbtn" onclick="location.href='user_dashboard.html'">Back</button>
+
+</div>
+</div>
+
+<script>
+
+// ✅ MESSAGE FUNCTION
+function showMsg(text, ok=false){
+  const msg = document.getElementById("msg");
+  msg.textContent = text;
+  msg.style.color = ok ? "#16a34a" : "#dc2626";
+}
+
+// ✅ DATE RESTRICT
+const dateInput = document.getElementById("date");
+
+const today = new Date();
+const yyyy = today.getFullYear();
+const mm = String(today.getMonth() + 1).padStart(2, "0");
+const dd = String(today.getDate()).padStart(2, "0");
+const todayStr = `${yyyy}-${mm}-${dd}`;
+
+dateInput.min = todayStr;
+dateInput.max = todayStr;
+dateInput.value = todayStr;
+
+dateInput.addEventListener("change", ()=>{
+  if(dateInput.value !== todayStr){
+    showMsg("Only today booking allowed ✅");
+    dateInput.value = todayStr;
+  }
+});
+
+// STORAGE
+function getSpaces(){
+  return JSON.parse(localStorage.getItem("ownerSpaces") || "[]");
+}
+function getBookings(){
+  return JSON.parse(localStorage.getItem("userBookings") || "[]");
+}
+
+// TIME
+function convertTo24(timeStr){
+  if(!timeStr) return 0;
+
+  timeStr = timeStr.trim().toUpperCase();
+  let [time, mod] = timeStr.split(/(AM|PM)/).filter(Boolean);
+  let hour = parseInt(time);
+
+  if(mod === "PM" && hour !== 12) hour += 12;
+  if(mod === "AM" && hour === 12) hour = 0;
+
+  return hour;
+}
+
+function isTimeValid(timeRange){
+  if(!timeRange || timeRange.trim() === "" || timeRange === "24/7"){
+    return true;
+  }
+
+  const parts = timeRange.split("-");
+  if(parts.length !== 2) return true;
+
+  const start = convertTo24(parts[0]);
+  const end = convertTo24(parts[1]);
+  const now = new Date().getHours();
+
+  return now >= start && now < end;
+}
+
+// MAP
+let map, layer;
+
+function initMap(lat,lng){
+  if(!map){
+    map = L.map("map").setView([lat,lng],13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      maxZoom:19
+    }).addTo(map);
+
+    layer = L.layerGroup().addTo(map);
+  }else{
+    map.setView([lat,lng],13);
+  }
+
+  setTimeout(()=> map.invalidateSize(),300);
+  layer.clearLayers();
+}
+
+function makeDot(status){
+  const color =
+    status==="AVAILABLE" ? "#16a34a" :
+    status==="BOOKED" ? "#dc2626" :
+    "#6b7280";
+
+  return L.divIcon({
+    className:"",
+    html:`<div style="
+      width:18px;height:18px;border-radius:50%;
+      background:${color};
+      border:3px solid white;
+    "></div>`,
+    iconSize:[18,18],
+    iconAnchor:[9,9]
+  });
+}
+
+// GEO
+async function geocode(place){
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!data.length) return null;
+  return {lat:Number(data[0].lat),lng:Number(data[0].lon)};
+}
+
+function distance(aLat,aLng,bLat,bLng){
+  const R=6371;
+  const dLat=(bLat-aLat)*Math.PI/180;
+  const dLng=(bLng-aLng)*Math.PI/180;
+  const aa=Math.sin(dLat/2)**2+
+    Math.cos(aLat*Math.PI/180)*Math.cos(bLat*Math.PI/180)*
+    Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(aa));
+}
+
+// RENDER
+function render(spaces,date){
+  const list=document.getElementById("list");
+  list.innerHTML="";
+
+  const bookings = getBookings();
+
+  spaces.forEach(s=>{
+
+    if(!isTimeValid(s.time || "24/7")) return;
+
+    // ✅ FIXED LOGIC
+    const activeBooking = bookings.find(b =>
+      String(b.parkingId) === String(s.id) &&
+      b.status === "STARTED"
+    );
+
+    let status = "AVAILABLE";
+
+    if(activeBooking){
+      status = "BOOKED";
+    } else if(s.status !== "AVAILABLE"){
+      status = s.status;
+    }
+
+    if(status !== "AVAILABLE") return;
+
+    const marker=L.marker([s.lat,s.lng],{
+      icon:makeDot(status)
+    }).addTo(layer);
+
+    marker.on("click",()=>{
+      location.href=`parking_details.html?pid=${s.id}&date=${date}`;
+    });
+
+    const div=document.createElement("div");
+    div.className="section";
+
+    div.innerHTML=`
+      <h3>${s.title}</h3>
+      <p>₹${s.rate}/hour | ${s.size}</p>
+      <p>Status: ${status}</p>
+      <button class="btn btn-primary">View</button>
+    `;
+
+    div.querySelector("button").onclick=()=>{
+      location.href=`parking_details.html?pid=${s.id}&date=${date}`;
+    };
+
+    list.appendChild(div);
+  });
+}
+
+// SEARCH
+document.getElementById("searchBtn").addEventListener("click",async()=>{
+  const loc=document.getElementById("loc").value.trim();
+  const date=document.getElementById("date").value;
+
+  if(!loc||!date){
+    showMsg("Enter location + date");
+    return;
+  }
+
+  const center=await geocode(loc);
+  if(!center){
+    showMsg("Location not found");
+    return;
+  }
+
+  document.getElementById("mapBox").style.display="block";
+  document.getElementById("resultsTitle").style.display="block";
+
+  const spaces=getSpaces()
+    .filter(s=>s.lat && s.lng)
+    .map(s=>({...s,
+      dist:distance(center.lat,center.lng,s.lat,s.lng)
+    }))
+    .sort((a,b)=>a.dist-b.dist)
+    .slice(0,5);
+
+  initMap(center.lat,center.lng);
+  render(spaces,date);
+});
+
+</script>
+
+</body>
+</html>

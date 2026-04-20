@@ -1,0 +1,129 @@
+  <!doctype html>
+  <html>
+  <head>
+    <style>
+      .msg { margin-top:10px; font-size:14px; min-height:18px; }
+  .msg.blink{
+    color:#fff;
+    background: rgba(220,38,38,.85);
+    padding:8px 10px;
+    border-radius:10px;
+    animation: blinkFlash .6s ease-in-out infinite;
+  }
+  @keyframes blinkFlash { 0%,100%{opacity:1;} 50%{opacity:.2;} }
+    </style>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>User - Login</title>
+    <link rel="stylesheet" href="style.css"/>
+  </head>
+  <body>
+     <video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+    <div class="page-bg">
+      <div class="card-box">
+        <div class="title">User Login</div>
+
+        <label>Username</label>
+        <input
+          id="lu_user"
+          placeholder="Enter username"
+          maxlength="13"
+          pattern="^[A-Za-z]{1,13}$"
+          title="Username must be alphabets only (max 13)"
+          required
+        >
+
+      <label>Password</label>
+
+      <input id="lu_pass" type="password" placeholder="Enter password" required>
+
+<div class="showpass-row">
+  <input type="checkbox" id="showuserPass">
+  <label for="showuserPass">Show Password</label>
+</div>
+      
+        <button class="btn btn-primary" id="userLoginBtn">Login</button>
+        <button class="btn linkbtn" onclick="location.href='user_signup.html'">New user? Sign Up</button>
+
+        <div class="msg" id="userLoginMsg"></div>
+      </div>
+    </div>
+
+    <script>
+      // ✅ Rules
+      const NAME_RULE = /^[A-Za-z]{1,13}$/;
+
+      const msgEl = document.getElementById("userLoginMsg");
+      let msgTimer = null;
+
+      function showMsg(text, blink=false){
+        msgEl.textContent = text;
+
+        msgEl.classList.remove("blink");
+        if(msgTimer) clearTimeout(msgTimer);
+
+        if(blink){
+          msgEl.classList.add("blink");
+          msgTimer = setTimeout(()=>{
+            msgEl.classList.remove("blink");
+            msgEl.textContent = "";
+          }, 6000);
+        }
+      }
+
+      document.getElementById("userLoginBtn").addEventListener("click", () => {
+        const u = document.getElementById("lu_user").value.trim();
+        const p = document.getElementById("lu_pass").value;
+
+        if(!u || !p){
+          showMsg("Fill all fields!", true);
+          return;
+        }
+
+        // ✅ username validation
+        if(!NAME_RULE.test(u)){
+          showMsg("Username alphabets only (max 13).", true);
+          return;
+        }
+
+        const saved = JSON.parse(localStorage.getItem("userCred") || "null");
+        if(!saved){
+          showMsg("No account found. Please Sign Up!", true);
+          return;
+        }
+
+        if(u === saved.username && p === saved.password){
+          showMsg("Login Successful ✅");
+
+          // ✅ if profile details already filled -> dashboard, else details page
+          const profile = JSON.parse(localStorage.getItem("userProfile") || "null");
+
+          setTimeout(()=>{
+            if(profile && profile.name && profile.email && profile.phone){
+              location.href = "user_dashboard.html";
+            }else{
+              location.href = "user_details.html";
+            }
+          }, 600);
+
+        } else {
+          showMsg("Wrong Username/Password ❌", true);
+        }
+      });
+    </script>
+   <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const cb = document.getElementById("showuserPass");
+  const pass = document.getElementById("lu_pass");
+
+  if(!cb || !pass) return;
+
+  cb.addEventListener("change", () => {
+    pass.type = cb.checked ? "text" : "password";
+  });
+});
+</script>
+  </body>
+  </html>

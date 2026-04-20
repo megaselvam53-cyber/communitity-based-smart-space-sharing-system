@@ -1,0 +1,273 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Add New Space</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    #map{ height:260px; width:100%; border-radius:12px; overflow:hidden; margin-top:10px; }
+    .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+    .img-preview{
+      width:100%; height:180px; border-radius:12px; overflow:hidden;
+      background:#f3f4f6; margin-top:10px; border:1px solid rgba(0,0,0,.08);
+      display:flex; align-items:center; justify-content:center; color:#6b7280; font-size:14px;
+    }
+    .img-preview img{width:100%; height:100%; object-fit:cover; display:none;}
+    .pill-note{font-size:12px; opacity:.8; margin-top:6px;}
+    .msg{margin-top:10px; font-size:14px;}
+  </style>
+</head>
+
+<body>
+
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+<div class="page-bg">
+  <div class="card-box">
+    <div class="title">Add New Space</div>
+    <div class="subtitle">Add your parking location + photo</div>
+
+    <label>Space Title</label>
+    <input id="title" placeholder="Eg: Near Bus Stand"/>
+
+    <label>Rate (₹/hour)</label>
+    <input id="rate" type="number" min="0" placeholder="Eg: 100"/>
+
+    <label>Size</label>
+    <select id="size">
+      <option value="">Select</option>
+      <option>Bike</option>
+      <option>Car</option>
+    </select>
+
+    <label>Status</label>
+    <select id="status">
+      <option value="AVAILABLE">Available</option>
+      <option value="NOT_AVAILABLE">Not Available</option>
+    </select>
+
+    <label>Available Time</label>
+    <input id="time" placeholder="Eg: 8AM - 8PM / 24/7">
+
+    <label>Google Maps Link / Location Name</label>
+    <input id="gLink" placeholder="Paste Google maps link OR type place">
+    <button class="btn btn-secondary" id="locBtn" type="button" style="margin-top:8px;">Set Location</button>
+
+    <div class="section" style="margin-top:12px;">
+      <h3>Select Location (Map)</h3>
+      <div id="map"></div>
+
+      <div class="row2" style="margin-top:10px;">
+        <div>
+          <label>Latitude</label>
+          <input id="lat" readonly>
+        </div>
+        <div>
+          <label>Longitude</label>
+          <input id="lng" readonly>
+        </div>
+      </div>
+    </div>
+
+    <label style="margin-top:10px;">Upload Parking Photo</label>
+    <input type="file" id="photoFile" accept="image/*"/>
+
+    <div class="img-preview">
+      <span id="previewText">No image selected</span>
+      <img id="previewImg"/>
+    </div>
+
+    <button class="btn btn-primary" id="addBtn">Add Space</button>
+    <button class="btn linkbtn" onclick="location.href='owner_dashboard.html'">Back</button>
+
+    <div class="msg" id="msgBox"></div>
+  </div>
+</div>
+
+<!-- SAME CODE ABOVE — NO CHANGE -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  function getSpaces(){
+    return JSON.parse(localStorage.getItem("ownerSpaces") || "[]");
+  }
+
+  function saveSpaces(arr){
+    localStorage.setItem("ownerSpaces", JSON.stringify(arr));
+  }
+
+  function setMsg(text, ok=true){
+    const box = document.getElementById("msgBox");
+    box.textContent = text;
+    box.style.color = ok ? "#16a34a" : "#dc2626";
+  }
+
+  // ================= IMAGE =================
+  let uploadedPhoto = "";
+  let imageLoading = false;
+
+  const fileInput = document.getElementById("photoFile");
+  const previewImg = document.getElementById("previewImg");
+  const previewText = document.getElementById("previewText");
+
+  fileInput.addEventListener("change", (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+
+    // ✅ SIZE CHECK (5MB)
+    if(file.size > 5 * 1024 * 1024){
+      setMsg("Image too large ❌ (max 5MB)", false);
+      fileInput.value = "";
+      uploadedPhoto = "";
+      return;
+    }
+
+    imageLoading = true; // 🔥 important
+
+    const reader = new FileReader();
+
+    reader.onload = function(ev){
+      uploadedPhoto = ev.target.result;
+
+      previewImg.src = uploadedPhoto;
+      previewImg.style.display = "block";
+      previewText.style.display = "none";
+
+      imageLoading = false; // 🔥 done
+    };
+
+    reader.onerror = function(){
+      setMsg("Image load failed ❌", false);
+      uploadedPhoto = "";
+      imageLoading = false;
+    };
+
+    reader.readAsDataURL(file);
+  });
+
+  // ================= MAP =================
+  let map = L.map("map").setView([11.6643, 78.1460], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+  let marker;
+
+  function setMarker(lat,lng){
+    document.getElementById("lat").value = lat;
+    document.getElementById("lng").value = lng;
+
+    if(marker) map.removeLayer(marker);
+    marker = L.marker([lat,lng]).addTo(map);
+    map.setView([lat,lng],15);
+  }
+
+  map.on("click", (e)=>{
+    setMarker(e.latlng.lat, e.latlng.lng);
+  });
+
+  // ================= MAP LINK =================
+  document.getElementById("locBtn").addEventListener("click", async ()=>{
+    const val = document.getElementById("gLink").value.trim();
+
+    if(!val){
+      setMsg("Enter location", false);
+      return;
+    }
+
+    let match = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+
+    if(match){
+      setMarker(match[1], match[2]);
+      return;
+    }
+
+    const url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(val);
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if(!data.length){
+      setMsg("Location not found", false);
+      return;
+    }
+
+    setMarker(data[0].lat, data[0].lon);
+  });
+
+  // ================= SAVE =================
+  document.getElementById("addBtn").addEventListener("click", ()=>{
+
+    const title = document.getElementById("title").value.trim();
+    const rate = document.getElementById("rate").value;
+    const size = document.getElementById("size").value;
+    const lat = document.getElementById("lat").value;
+    const lng = document.getElementById("lng").value;
+
+    // ✅ FIELD VALIDATION
+    if(!title){
+      setMsg("Enter title ❌", false);
+      return;
+    }
+    if(!rate){
+      setMsg("Enter rate ❌", false);
+      return;
+    }
+    if(!size){
+      setMsg("Select size ❌", false);
+      return;
+    }
+    if(!lat || !lng){
+      setMsg("Set location ❌", false);
+      return;
+    }
+
+    // ✅ IMAGE LOADING FIX
+    if(imageLoading){
+      setMsg("Please wait... Image processing ❌", false);
+      return;
+    }
+
+    // ✅ IMAGE ERROR FIX
+    if(fileInput.files.length > 0 && !uploadedPhoto){
+      setMsg("Image not processed properly ❌", false);
+      return;
+    }
+
+    const spaces = getSpaces();
+
+    const owner = JSON.parse(localStorage.getItem("ownerProfile") || "null");
+    const ownerName = owner?.name || "Owner";
+
+    spaces.push({
+      id: "P"+Date.now(),
+      ownerName,
+      title,
+      rate: Number(rate),
+      size,
+      lat: Number(lat),
+      lng: Number(lng),
+      status: document.getElementById("status").value,
+      time: document.getElementById("time").value,
+      photo: uploadedPhoto || "https://via.placeholder.com/700x350"
+    });
+
+    saveSpaces(spaces);
+
+    setMsg("Space Added ✅");
+
+    setTimeout(()=>{
+      location.href="owner_dashboard.html";
+    },1000);
+  });
+
+});
+</script>
+
+</body>
+</html>

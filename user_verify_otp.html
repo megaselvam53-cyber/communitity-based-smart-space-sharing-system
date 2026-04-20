@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Verify OTP</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  
+  <video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+<div class="page-bg">
+<div class="card-box">
+<div class="title">Enter OTP</div>
+
+<input id="otpInput" placeholder="Enter OTP">
+
+<button class="btn btn-primary" id="verifyBtn">Verify</button>
+
+<div id="msg"></div>
+
+</div>
+</div>
+
+<script>
+function getBookings(){
+  return JSON.parse(localStorage.getItem("userBookings") || "[]");
+}
+function saveBookings(data){
+  localStorage.setItem("userBookings", JSON.stringify(data));
+}
+
+document.getElementById("verifyBtn").addEventListener("click", ()=>{
+  const input = document.getElementById("otpInput").value;
+  const bookings = getBookings();
+  const active = bookings.find(b => b.status === "ACTIVE");
+
+  if(!active){
+    document.getElementById("msg").textContent = "No active booking";
+    return;
+  }
+
+  if(Date.now() > active.otpExpiry){
+    document.getElementById("msg").textContent = "OTP Expired ❌";
+    return;
+  }
+
+  if(input == active.otp){
+    active.status = "STARTED";
+    saveBookings(bookings);
+    document.getElementById("msg").textContent = "Parking Started ✅";
+  } else {
+    document.getElementById("msg").textContent = "Wrong OTP ❌";
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>My Spaces</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  
+  <video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+  <div class="page-bg">
+    <div class="card-box">
+      <div class="title">My Spaces</div>
+      <div class="subtitle"> Available / Not Available</div>
+
+      <div id="spaces" class="grid"></div>
+
+      <button class="btn linkbtn" onclick="location.href='owner_dashboard.html'">Back</button>
+    </div>
+  </div>
+
+ <script>
+function getSpaces(){ return JSON.parse(localStorage.getItem("ownerSpaces") || "[]"); }
+function saveSpaces(sp){ localStorage.setItem("ownerSpaces", JSON.stringify(sp)); }
+function getBookings(){ return JSON.parse(localStorage.getItem("userBookings") || "[]"); }
+
+// 🔥 NEW
+function getBookedMap(){
+  return JSON.parse(localStorage.getItem("bookedMap") || "{}");
+}
+
+function saveBookedMap(bm){
+  localStorage.setItem("bookedMap", JSON.stringify(bm));
+}
+
+function render(){
+  const sp = getSpaces();
+  const bookings = getBookings();
+
+  const wrap = document.getElementById("spaces");
+  wrap.innerHTML = "";
+
+  if(!sp.length){
+    wrap.innerHTML = `<div class="section">No spaces found.</div>`;
+    return;
+  }
+
+  sp.forEach((s, idx)=>{
+
+    const activeBooking = bookings.find(b =>
+      String(b.parkingId) === String(s.id) &&
+      (b.status === "STARTED" || b.status === "ENDED")
+    );
+
+    let displayStatus = "";
+    let color = "";
+
+    if(activeBooking){
+      displayStatus = "In Use 🚗";
+      color = "#dc2626";
+    }else if(s.status === "AVAILABLE"){
+      displayStatus = "Available ✅";
+      color = "#16a34a";
+    }else{
+      displayStatus = "Not Available ❌";
+      color = "#6b7280";
+    }
+
+    const div = document.createElement("div");
+    div.className = "section";
+
+    div.innerHTML = `
+      <h3>${s.title} (${s.size})</h3>
+      <p><b>Rate:</b> ₹${s.rate}/hour</p>
+      <p><b>Status:</b> <span style="color:${color};font-weight:700;">${displayStatus}</span></p>
+
+      <button class="btn btn-primary">Available</button>
+      <button class="btn btn-secondary" style="margin-top:8px;">Not Available</button>
+    `;
+
+    const btnA = div.querySelectorAll("button")[0];
+    const btnN = div.querySelectorAll("button")[1];
+
+    if(activeBooking){
+      btnA.disabled = true;
+      btnN.disabled = true;
+    }
+
+    // ✅ AVAILABLE CLICK (FIXED)
+    btnA.addEventListener("click", ()=>{
+      const all = getSpaces();
+      all[idx].status = "AVAILABLE";
+      saveSpaces(all);
+
+      // 🔥 MAIN FIX
+      let bm = getBookedMap();
+      delete bm[s.id];
+      saveBookedMap(bm);
+
+      render();
+    });
+
+    // ❌ NOT AVAILABLE
+    btnN.addEventListener("click", ()=>{
+      const all = getSpaces();
+      all[idx].status = "NOT_AVAILABLE";
+      saveSpaces(all);
+
+      render();
+    });
+
+    wrap.appendChild(div);
+  });
+}
+
+render();
+</script><script>
+function getSpaces(){ return JSON.parse(localStorage.getItem("ownerSpaces") || "[]"); }
+function saveSpaces(sp){ localStorage.setItem("ownerSpaces", JSON.stringify(sp)); }
+function getBookings(){ return JSON.parse(localStorage.getItem("userBookings") || "[]"); }
+
+// 🔥 NEW
+function getBookedMap(){
+  return JSON.parse(localStorage.getItem("bookedMap") || "{}");
+}
+
+function saveBookedMap(bm){
+  localStorage.setItem("bookedMap", JSON.stringify(bm));
+}
+
+function render(){
+  const sp = getSpaces();
+  const bookings = getBookings();
+
+  const wrap = document.getElementById("spaces");
+  wrap.innerHTML = "";
+
+  if(!sp.length){
+    wrap.innerHTML = `<div class="section">No spaces found.</div>`;
+    return;
+  }
+
+  sp.forEach((s, idx)=>{
+
+    const activeBooking = bookings.find(b =>
+      String(b.parkingId) === String(s.id) &&
+      (b.status === "STARTED" || b.status === "ENDED")
+    );
+
+    let displayStatus = "";
+    let color = "";
+
+    if(activeBooking){
+      displayStatus = "In Use 🚗";
+      color = "#dc2626";
+    }else if(s.status === "AVAILABLE"){
+      displayStatus = "Available ✅";
+      color = "#16a34a";
+    }else{
+      displayStatus = "Not Available ❌";
+      color = "#6b7280";
+    }
+
+    const div = document.createElement("div");
+    div.className = "section";
+
+    div.innerHTML = `
+      <h3>${s.title} (${s.size})</h3>
+      <p><b>Rate:</b> ₹${s.rate}/hour</p>
+      <p><b>Status:</b> <span style="color:${color};font-weight:700;">${displayStatus}</span></p>
+
+      <button class="btn btn-primary">Available</button>
+      <button class="btn btn-secondary" style="margin-top:8px;">Not Available</button>
+    `;
+
+    const btnA = div.querySelectorAll("button")[0];
+    const btnN = div.querySelectorAll("button")[1];
+
+    if(activeBooking){
+      btnA.disabled = true;
+      btnN.disabled = true;
+    }
+
+    // ✅ AVAILABLE CLICK (FIXED)
+    btnA.addEventListener("click", ()=>{
+      const all = getSpaces();
+      all[idx].status = "AVAILABLE";
+      saveSpaces(all);
+
+      // 🔥 MAIN FIX
+      let bm = getBookedMap();
+      delete bm[s.id];
+      saveBookedMap(bm);
+
+      render();
+    });
+
+    // ❌ NOT AVAILABLE
+    btnN.addEventListener("click", ()=>{
+      const all = getSpaces();
+      all[idx].status = "NOT_AVAILABLE";
+      saveSpaces(all);
+
+      render();
+    });
+
+    wrap.appendChild(div);
+  });
+}
+
+render();
+</script>
+
+</body>
+</html>

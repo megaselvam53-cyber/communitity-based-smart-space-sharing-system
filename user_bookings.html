@@ -1,0 +1,260 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>My Bookings</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <style>
+    .tag{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      margin-left:8px;
+    }
+    .green{ background:rgba(34,197,94,.18); }
+    .red{ background:rgba(239,68,68,.18); }
+    .gray{ background:rgba(107,114,128,.18); }
+  </style>
+</head>
+
+<body>
+
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+<div class="page-bg">
+  <div class="card-box">
+    <div class="title">My Bookings</div>
+
+    <div id="bookingsBox" class="grid" style="margin-top:12px;"></div>
+
+    <button class="btn linkbtn" style="margin-top:14px;"
+      onclick="location.href='user_dashboard.html'">
+      Back
+    </button>
+  </div>
+</div>
+
+<script>
+// ================= STORAGE =================
+function getBookings(){
+  return JSON.parse(localStorage.getItem("userBookings") || "[]");
+}
+
+function saveBookings(arr){
+  localStorage.setItem("userBookings", JSON.stringify(arr));
+}
+
+function getBookedMap(){
+  return JSON.parse(localStorage.getItem("bookedMap") || "{}");
+}
+
+function saveBookedMap(bm){
+  localStorage.setItem("bookedMap", JSON.stringify(bm));
+}
+
+// ================= PAYMENT =================
+function payNow(id){
+  let bookings = getBookings();
+  const i = bookings.findIndex(b => b.bookingId == id);
+
+  if(i === -1) return;
+
+  // 🔥 END TIME SET
+  if(bookings[i].status === "STARTED"){
+    bookings[i].status = "ENDED";
+    bookings[i].endTime = new Date().toLocaleTimeString();
+    saveBookings(bookings);
+  }
+
+  // 🚀 REDIRECT
+  location.href = `payment.html?bid=${encodeURIComponent(id)}`;
+}
+
+// ================= UI =================
+const box = document.getElementById("bookingsBox");
+const bookings = getBookings();
+
+// 🔔 Payment reminder
+bookings.forEach(b=>{
+  if(b.status === "ENDED" && b.paymentStatus !== "PAID"){
+    alert("Please complete payment for Booking ID: " + b.bookingId);
+  }
+});
+
+if(!bookings.length){
+  box.innerHTML = `
+    <div class="section">
+      <b>No bookings yet.</b><br>
+      <small>Go to Find Parking and book a spot.</small>
+    </div>
+  `;
+}else{
+
+  bookings.slice().reverse().forEach(b => {
+
+    if(!b.status) b.status = "PENDING";
+    if(!b.paymentStatus) b.paymentStatus = "NOT_PAID";
+    if(typeof b.rated === "undefined") b.rated = false;
+
+    const st = b.status;
+
+    const statusClass =
+      st === "COMPLETED" ? "green" :
+      st === "CANCELLED" ? "red" :
+      st === "STARTED" ? "green" :
+      "gray";
+
+    // 💰 BILL CALCULATION
+    let amount = "-";
+    if(b.startTime && b.endTime){
+      const start = new Date("1970/01/01 " + b.startTime);
+      const end = new Date("1970/01/01 " + b.endTime);
+
+      if(end > start){
+        const hours = Math.ceil((end - start) / (1000 * 60 * 60));
+        amount = hours * (b.rate || 0);
+      } else {
+        amount = 0;
+      }
+    }
+
+    const div = document.createElement("div");
+    div.className = "section";
+
+    div.innerHTML = `
+      <h3>
+        ${b.title || "Parking"}
+        <span class="tag ${statusClass}">${st}</span>
+      </h3>
+
+      <div><b>Owner:</b> ${b.ownerName || "-"}</div>
+      <div><b>Date:</b> ${b.date || "-"}</div>
+      <div><b>Vehicle:</b> ${b.vehicle || "-"}</div>
+      <div><b>Rate:</b> ₹${b.rate || 0}/hour</div>
+
+      ${b.startTime ? `<div><b>Start:</b> ${b.startTime}</div>` : ""}
+      ${b.endTime ? `<div><b>End:</b> ${b.endTime}</div>` : ""}
+      ${b.paidTime ? `<div><b>Paid At:</b> ${b.paidTime}</div>` : ""}
+
+      <div><b>Total Amount:</b> ₹${amount}</div>
+
+      <div>
+        <b>Payment:</b>
+        <span class="tag ${b.paymentStatus === 'PAID' ? 'green' : 'red'}">
+          ${b.paymentStatus}
+        </span>
+      </div>
+
+      <div style="margin-top:10px;">
+
+        <!-- VIEW -->
+        <button class="btn btn-primary"
+          onclick="viewDetails('${b.bookingId}')">
+          View Details
+        </button>
+
+        <!-- PAY -->
+        ${
+          b.paymentStatus !== "PAID" && b.status !== "CANCELLED"
+          ? `<button class="btn btn-primary"
+               onclick="payNow('${b.bookingId}')">
+               Pay Now 💳
+             </button>`
+          : ""
+        }
+
+        <!-- CANCEL (FIXED 🔥) -->
+        ${
+          st === "PENDING" && b.paymentStatus !== "PAID"
+          ? `<button class="btn btn-secondary"
+               onclick="cancelBooking('${b.bookingId}')">
+               Cancel Booking
+             </button>`
+          : ""
+        }
+
+        <!-- RATE -->
+        ${
+          st === "COMPLETED" && !b.rated
+          ? `<button class="btn btn-primary"
+               onclick="rateBooking('${b.bookingId}')">
+               Rate Parking ⭐
+             </button>`
+          : ""
+        }
+
+        ${
+          st === "COMPLETED" && b.rated
+          ? `<div style="margin-top:8px;font-weight:700;color:#16a34a;">
+               Rated ✅
+             </div>`
+          : ""
+        }
+
+      </div>
+    `;
+
+    box.appendChild(div);
+  });
+}
+
+// ================= NAVIGATION =================
+function viewDetails(bookingId){
+  location.href = `booking_view.html?bid=${encodeURIComponent(bookingId)}`;
+}
+
+function rateBooking(bookingId){
+  const bookings = getBookings();
+  const b = bookings.find(x => x.bookingId === bookingId);
+
+  if(b.status !== "COMPLETED"){
+    alert("Complete booking first ❌");
+    return;
+  }
+
+  location.href = `rating.html?bid=${encodeURIComponent(bookingId)}`;
+}
+
+// ================= CANCEL =================
+function cancelBooking(bookingId){
+  const ok = confirm("Cancel this booking?");
+  if(!ok) return;
+
+  const arr = getBookings();
+  const index = arr.findIndex(x => x.bookingId === bookingId);
+
+  if(index === -1){
+    alert("Booking not found");
+    return;
+  }
+
+  // 🔥 FIX: payment check
+  if(arr[index].paymentStatus === "PAID"){
+    alert("Already paid ❌ Cannot cancel");
+    return;
+  }
+
+  if(arr[index].status !== "PENDING"){
+    alert("Cannot cancel now ❌");
+    return;
+  }
+
+  arr[index].status = "CANCELLED";
+  saveBookings(arr);
+
+  const bm = getBookedMap();
+  delete bm[arr[index].parkingId];
+  saveBookedMap(bm);
+
+  alert("Booking Cancelled ✅");
+  location.reload();
+}
+</script>
+
+</body>
+</html>

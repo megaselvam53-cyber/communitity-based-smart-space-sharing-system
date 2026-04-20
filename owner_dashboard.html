@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Owner Dashboard</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <style>
+    .stat-box{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      margin-top:12px;
+    }
+    .stat{
+      flex:1;
+      padding:12px;
+      border-radius:12px;
+      background:rgba(255,255,255,0.08);
+      text-align:center;
+    }
+    .stat h2{
+      margin:6px 0;
+      font-size:20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+<div class="page-bg">
+  <div class="card-box">
+    <div class="title">Owner Dashboard</div>
+    <div class="subtitle" id="ownWelcome"></div>
+
+    <!-- PROFILE -->
+   <div class="section" style="margin-top:12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <h3 style="margin:0;">Profile Details</h3>
+         <button 
+  onclick="location.href='owner_details.html?edit=1'"
+  style="border:none;background:transparent;cursor:pointer;font-size:18px;">
+  ✎
+</button>
+        </div>
+        <div id="ownerBox" style="margin-top:8px; opacity:0.9;"></div>
+      </div>
+
+    <!-- 📊 STATS -->
+    <div class="stat-box">
+      <div class="stat">
+        <div>Total Bookings</div>
+        <h2 id="totalBookings">0</h2>
+      </div>
+      <div class="stat">
+        <div>Active</div>
+        <h2 id="activeBookings">0</h2>
+      </div>
+      <div class="stat">
+        <div>Earnings</div>
+        <h2 id="totalEarnings">₹0</h2>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="grid" style="margin-top:14px;">
+
+      <button class="btn btn-primary" onclick="location.href='owner_add_space.html'">➕ Add New Space</button>
+      <button class="btn btn-primary" onclick="location.href='owner_spaces.html'">My Spaces</button>
+      <button class="btn btn-primary" onclick="location.href='owner_book_details.html'">Book Details</button>
+      <button class="btn btn-primary" onclick="location.href='owner_ratings.html'">⭐View Ratings</button>
+       <button class="btn btn-primary" onclick="location.href='owner_otp.html'">Generate OTP</button>
+    </div>
+
+    <button class="btn linkbtn" style="margin-top:14px;" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<script>
+// ================= PROFILE =================
+function loadOwnerProfile(){
+  const p = JSON.parse(localStorage.getItem("ownerProfile") || "null");
+  const box = document.getElementById("ownerBox");
+
+  if(!p){
+    document.getElementById("ownWelcome").textContent = "Welcome!";
+    box.innerHTML = "No owner profile found";
+    return;
+  }
+
+  document.getElementById("ownWelcome").textContent = `Welcome, ${p.name}`;
+
+  box.innerHTML = `
+    <div><b>Name:</b> ${p.name}</div>
+    <div><b>Mobile:</b> ${p.mobile}</div>
+    <div><b>City:</b> ${p.city}</div>
+    <div><b>Facilities:</b> ${p.facilities?.join(", ") || "-"}</div>
+    <div><b>Address:</b> ${p.address}</div>
+  `;
+
+  calculateStats(p.name);
+}
+
+// ================= STATS =================
+function calculateStats(ownerName){
+  const bookings = JSON.parse(localStorage.getItem("userBookings") || "[]");
+
+  const myBookings = bookings.filter(b => b.ownerName === ownerName);
+
+  const total = myBookings.length;
+
+  const active = myBookings.filter(b =>
+    b.status === "STARTED"
+  ).length;
+
+  const earnings = myBookings
+    .filter(b => b.paymentStatus === "PAID")
+    .reduce((sum, b) => sum + Number(b.rate || 0), 0);
+
+  document.getElementById("totalBookings").innerText = total;
+  document.getElementById("activeBookings").innerText = active;
+  document.getElementById("totalEarnings").innerText = "₹" + earnings;
+}
+
+// ================= LOGOUT =================
+function logout(){
+  location.href = "index.html";
+}
+
+// INIT
+loadOwnerProfile();
+</script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Payment</title>
+<link rel="stylesheet" href="style.css"/>
+
+<style>
+.qr{width:180px;height:180px;margin:auto;display:block;margin-top:10px;}
+.center{text-align:center;}
+.amount{font-size:22px;font-weight:800;color:#16a34a;text-align:center;margin-top:10px;}
+.upi-box{background:rgba(255,255,255,0.08);padding:10px;border-radius:12px;margin-top:10px;}
+.methods{display:flex;justify-content:center;gap:10px;margin-top:8px;}
+.methods div{padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.1);font-size:13px;}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+</head>
+
+<body>
+
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+<div class="page-bg">
+<div class="card-box">
+
+<div class="title">Complete Payment</div>
+
+<div id="info" class="section"></div>
+
+<div class="upi-box center">
+
+  <div class="amount" id="amountBox">Rs. 0</div>
+
+  <p><b>UPI ID:</b> parking@upi</p>
+
+  <div class="methods">
+    <div>GPay</div>
+    <div>PhonePe</div>
+    <div>Paytm</div>
+  </div>
+
+  <p style="margin-top:10px;"><b>Scan & Pay</b></p>
+
+  <img class="qr"
+    src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=parking-payment">
+
+</div>
+
+<button class="btn btn-primary" id="payBtn">Pay Now</button>
+
+<button class="btn btn-secondary" id="downloadBtn" style="margin-top:10px;">
+  Download Receipt 📄
+</button>
+
+<!-- 🔥 initially hidden -->
+<button class="btn btn-primary" id="bookingBtn" style="margin-top:10px; display:none;">
+  My Bookings
+</button>
+
+<div id="msg" class="msg"></div>
+
+</div>
+</div>
+
+<script>
+
+// ================= STORAGE =================
+function getBookings(){
+  return JSON.parse(localStorage.getItem("userBookings") || "[]");
+}
+
+function saveBookings(b){
+  localStorage.setItem("userBookings", JSON.stringify(b));
+}
+
+function getBookedMap(){
+  return JSON.parse(localStorage.getItem("bookedMap") || "{}");
+}
+
+function saveBookedMap(bm){
+  localStorage.setItem("bookedMap", JSON.stringify(bm));
+}
+
+function getSpaces(){
+  return JSON.parse(localStorage.getItem("ownerSpaces") || "[]");
+}
+
+function saveSpaces(sp){
+  localStorage.setItem("ownerSpaces", JSON.stringify(sp));
+}
+
+// ================= LOAD =================
+const qp = new URLSearchParams(location.search);
+const bookingId = qp.get("bid");
+
+let bookings = getBookings();
+let index = bookings.findIndex(b => b.bookingId == bookingId);
+
+const infoBox = document.getElementById("info");
+const amountBox = document.getElementById("amountBox");
+
+if(index === -1){
+  infoBox.innerHTML = "<b>Booking not found</b>";
+}else{
+
+  const b = bookings[index];
+
+  const start = b.startTime ? new Date("1970-01-01 " + b.startTime) : null;
+  const end = b.endTime ? new Date("1970-01-01 " + b.endTime) : null;
+
+  let durationHours = 1;
+
+  if(start && end && end > start){
+    const diffMs = end - start;
+    durationHours = Math.ceil(diffMs / (1000*60*60));
+  }
+
+  const total = durationHours * Number(b.rate || 0);
+
+  amountBox.textContent = "Rs. " + total;
+
+  infoBox.innerHTML = `
+    <h3>${b.title}</h3>
+    <p><b>Start Time:</b> ${b.startTime || "-"}</p>
+    <p><b>End Time:</b> ${b.endTime || "-"}</p>
+    <p><b>Duration:</b> ${durationHours} hour(s)</p>
+  `;
+
+  b.tempAmount = total;
+  saveBookings(bookings);
+}
+
+// ================= PAYMENT =================
+document.getElementById("payBtn").addEventListener("click", ()=>{
+
+  if(index === -1) return;
+
+  let b = bookings[index];
+
+  b.paymentStatus = "PAID";
+  b.status = "COMPLETED";
+  b.price = b.tempAmount || 0;
+  b.paidTime = new Date().toLocaleTimeString();
+
+  saveBookings(bookings);
+
+  // clear booked
+  let bm = getBookedMap();
+  delete bm[b.parkingId];
+  saveBookedMap(bm);
+
+  // make space available
+  let spaces = getSpaces();
+  const sIndex = spaces.findIndex(s => String(s.id) === String(b.parkingId));
+
+  if(sIndex !== -1){
+    spaces[sIndex].status = "AVAILABLE";
+    saveSpaces(spaces);
+  }
+
+  document.getElementById("msg").textContent = "Payment Successful ✅";
+
+  // 🔥 SHOW BUTTON
+  document.getElementById("bookingBtn").style.display = "block";
+});
+
+// ================= NAVIGATION =================
+document.getElementById("bookingBtn").addEventListener("click", ()=>{
+  window.location.href = "user_bookings.html";
+});
+
+// ================= PDF =================
+document.getElementById("downloadBtn").addEventListener("click", ()=>{
+
+  if(index === -1) return;
+
+  const b = bookings[index];
+  const { jsPDF } = window.jspdf;
+
+  const doc = new jsPDF();
+
+  let y = 20;
+
+  doc.setFontSize(18);
+  doc.text("Parking Receipt", 20, y);
+
+  y += 15;
+  doc.setFontSize(12);
+
+  function row(label, value){
+    doc.text(label + ":", 20, y);
+    doc.text(String(value), 110, y);
+    y += 10;
+  }
+
+  row("Booking ID", b.bookingId);
+  row("Parking", b.title);
+  row("Date", b.date);
+  row("Start Time", b.startTime || "-");
+  row("End Time", b.endTime || "-");
+  row("Total Amount", "Rs. " + (b.price || 0));
+  row("Paid At", b.paidTime || "-");
+
+  y += 10;
+
+  doc.text("Thank you for using our parking service!", 20, y);
+
+  doc.save("Parking_Receipt.pdf");
+
+});
+
+</script>
+
+</body>
+</html>

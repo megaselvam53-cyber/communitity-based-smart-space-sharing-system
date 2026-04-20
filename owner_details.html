@@ -1,0 +1,184 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Owner - Details</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <style>
+    .msg { margin-top:10px; font-size:14px; min-height:18px; }
+    .msg.ok{
+      color:#fff;
+      background: rgba(16,185,129,.85);
+      padding:8px 10px;
+      border-radius:10px;
+    }
+    .msg.blink{
+      color:#fff;
+      background: rgba(220,38,38,.85);
+      padding:8px 10px;
+      border-radius:10px;
+      animation: blinkFlash .6s ease-in-out infinite;
+    }
+    @keyframes blinkFlash { 0%,100%{opacity:1;} 50%{opacity:.25;} }
+  </style>
+</head>
+
+<body>
+  
+  <video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+  <div class="page-bg">
+    <div class="card-box">
+      <div class="title">Owner Details</div>
+      <div class="subtitle">Fill your basic details (Location will be set while adding space)</div>
+
+      <label>Name</label>
+      <input id="oname" maxlength="13" placeholder="Owner name (max 13 letters)">
+
+      <label>Mobile Number</label>
+      <input id="omobile" maxlength="10" inputmode="numeric" placeholder="10 digit mobile">
+
+      <label>Address</label>
+      <textarea id="oaddress" placeholder="Enter full address"></textarea>
+
+
+      <label>Facilities</label>
+      <div class="row">
+        <label><input type="checkbox" class="fac" value="Covered"> Covered</label>
+        <label><input type="checkbox" class="fac" value="CCTV"> CCTV</label>
+        <label><input type="checkbox" class="fac" value="Gate"> Gate</label>
+      </div>
+
+      
+      <label>Select City</label>
+      <select id="ocity">
+        <option value="">Select City</option>
+        <option>Salem</option>
+        <option>Namakkal</option>
+        <option>Erode</option>
+        <option>Coimbatore</option>
+      </select>
+
+      <button class="btn btn-primary" id="ownerDetailsSubmit" type="submit">Submit</button>
+      <div class="msg" id="ownerDetailsMsg"></div>
+
+      
+    </div>
+  </div>
+
+  <script>
+  // -------- Rules ----------
+  const NAME_RULE = /^[A-Za-z ]{1,13}$/;
+  const MOBILE_RULE = /^[0-9]{10}$/;
+
+  const msgEl = document.getElementById("ownerDetailsMsg");
+  let msgTimer = null;
+
+  function showMsg(text, type){
+    msgEl.textContent = text;
+    msgEl.classList.remove("blink","ok");
+
+    if(msgTimer) clearTimeout(msgTimer);
+
+    if(type === "err"){
+      msgEl.classList.add("blink");
+      msgTimer = setTimeout(()=>{
+        msgEl.classList.remove("blink");
+        msgEl.textContent = "";
+      }, 6000);
+    } else if(type === "ok"){
+      msgEl.classList.add("ok");
+    }
+  }
+
+  // only numbers
+  document.getElementById("omobile").addEventListener("input", (e)=>{
+    e.target.value = e.target.value.replace(/[^0-9]/g,"").slice(0,10);
+  });
+
+  function getFacilities(){
+    return [...document.querySelectorAll(".fac:checked")].map(x=>x.value);
+  }
+
+  // ================= AUTO FILL ONLY FOR EDIT =================
+  document.addEventListener("DOMContentLoaded", function(){
+
+    const isEdit = window.location.search.includes("edit=1");
+    if(!isEdit) return;
+
+    const owner = JSON.parse(localStorage.getItem("ownerProfile") || "null");
+    if(!owner) return;
+
+    document.getElementById("oname").value = owner.name || "";
+    document.getElementById("omobile").value = owner.mobile || "";
+    document.getElementById("ocity").value = owner.city || "";
+    document.getElementById("oaddress").value = owner.address || "";
+
+    if(owner.facilities){
+      owner.facilities.forEach(f => {
+        const el = document.querySelector(`.fac[value="${f}"]`);
+        if(el) el.checked = true;
+      });
+    }
+
+  });
+
+  // -------- Submit ----------
+  document.getElementById("ownerDetailsSubmit").addEventListener("click", ()=>{
+
+    const name = document.getElementById("oname").value.trim();
+    const mobile = document.getElementById("omobile").value.trim();
+    const address = document.getElementById("oaddress").value.trim();
+    const city = document.getElementById("ocity").value;
+    const facilities = getFacilities();
+
+    // validations
+    if(!NAME_RULE.test(name)){
+      showMsg("Name alphabets only (max 13 characters).", "err");
+      return;
+    }
+
+    if(!MOBILE_RULE.test(mobile)){
+      showMsg("Mobile must be exactly 10 digits.", "err");
+      return;
+    }
+
+    if(!address){
+      showMsg("Address required.", "err");
+      return;
+    }
+
+
+    if(facilities.length === 0){
+      showMsg("Select at least one facility.", "err");
+      return;
+    }
+
+    if(!city){
+      showMsg("Select city.", "err");
+      return;
+    }
+
+    const profile = {
+      name,
+      mobile,
+      address,
+      city,
+      facilities
+    };
+
+    localStorage.setItem("ownerProfile", JSON.stringify(profile));
+
+    showMsg("Saved Successfully ✅ Redirecting...", "ok");
+
+    setTimeout(()=>{
+      location.href = "owner_dashboard.html";
+    }, 900);
+
+  });
+</script>
+</body>
+</html>

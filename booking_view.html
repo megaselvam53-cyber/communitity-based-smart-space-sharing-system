@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Booking View</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <style>
+    .row{display:flex; justify-content:space-between; margin:6px 0;}
+    .tag{display:inline-block; padding:6px 10px; border-radius:999px; background:rgba(255,255,255,.15);}
+    .imgbox{width:100%; height:180px; border-radius:12px; overflow:hidden; margin-top:10px;}
+    .imgbox img{width:100%; height:100%; object-fit:cover;}
+  </style>
+</head>
+
+<body>
+
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+<div class="page-bg">
+  <div class="card-box">
+    <div class="title">Booking Details</div>
+
+    <div id="msg"></div>
+
+    <div class="imgbox">
+      <img id="photo" src="https://via.placeholder.com/700x350">
+    </div>
+
+    <div class="section">
+      <div class="subtitle">Owner Details</div>
+      <div id="ownerBox"></div>
+    </div>
+
+    <div class="section">
+      <div class="subtitle">Booking Info</div>
+      <div id="bookBox"></div>
+    </div>
+
+    <button class="btn linkbtn"
+      onclick="location.href='user_bookings.html'">
+      Back
+    </button>
+  </div>
+</div>
+
+<script>
+
+// ================= STORAGE =================
+function getSpaces(){
+  return JSON.parse(localStorage.getItem("ownerSpaces") || "[]");
+}
+
+function getBookings(){
+  return JSON.parse(localStorage.getItem("userBookings") || "[]");
+}
+
+function getOwnerProfile(){
+  return JSON.parse(localStorage.getItem("ownerProfile") || "null");
+}
+
+// ================= INIT =================
+const qp = new URLSearchParams(location.search);
+const bid = qp.get("bid");
+
+const msg = document.getElementById("msg");
+const ownerBox = document.getElementById("ownerBox");
+const bookBox = document.getElementById("bookBox");
+
+if(!bid){
+  msg.innerHTML = "No booking selected ❌";
+}else{
+
+  const bookings = getBookings();
+  const b = bookings.find(x => x.bookingId == bid);
+
+  if(!b){
+    msg.innerHTML = "Booking not found ❌";
+  }else{
+
+    msg.innerHTML = `<span class="tag">Booking ID: ${b.bookingId}</span>`;
+
+    // IMAGE
+    const space = getSpaces().find(s => s.id == b.parkingId);
+    if(space?.photo){
+      document.getElementById("photo").src = space.photo;
+    }
+
+    // OWNER DETAILS
+    const op = getOwnerProfile();
+    ownerBox.innerHTML = `
+      <div class="row"><b>Name</b><span>${b.ownerName}</span></div>
+      <div class="row"><b>Mobile</b><span>${op?.mobile || "-"}</span></div>
+      <div class="row"><b>City</b><span>${op?.city || "-"}</span></div>
+    `;
+
+    // 🔥 FIXED AMOUNT LOGIC
+    const amount = b.price || b.tempAmount || 0;
+
+    // BOOKING DETAILS
+    bookBox.innerHTML = `
+      <div class="row"><b>Parking</b><span>${b.title}</span></div>
+      <div class="row"><b>Date</b><span>${b.date}</span></div>
+      <div class="row"><b>Vehicle</b><span>${b.vehicle}</span></div>
+      <div class="row"><b>Rate</b><span>₹${b.rate}/hour</span></div>
+
+      <div class="row"><b>Status</b><span>${b.status}</span></div>
+
+      ${b.otp && b.status === "PENDING" ? 
+        `<div class="row"><b>OTP</b><span>${b.otp}</span></div>` : ""}
+
+      ${b.startTime ? 
+        `<div class="row"><b>Start</b><span>${b.startTime}</span></div>` : ""}
+
+      ${b.endTime ? 
+        `<div class="row"><b>End</b><span>${b.endTime}</span></div>` : ""}
+
+      ${b.paidTime ? 
+        `<div class="row"><b>Paid At</b><span>${b.paidTime}</span></div>` : ""}
+
+      <div class="row"><b>Payment</b>
+        <span>${b.paymentStatus}</span>
+      </div>
+
+      <div class="row"><b>Total Amount</b>
+        <span>₹${amount}</span>
+      </div>
+
+      <div class="row"><b>Your Rating</b>
+        <span>${b.userRating ? b.userRating + " ⭐" : "-"}</span>
+      </div>
+
+      <div class="row"><b>Feedback</b>
+        <span>${b.userFeedback || "-"}</span>
+      </div>
+    `;
+  }
+}
+
+</script>
+
+</body>
+</html>

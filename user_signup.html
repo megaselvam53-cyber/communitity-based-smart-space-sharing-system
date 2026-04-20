@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>User - Signup</title>
+
+  <style>
+    .msg { margin-top:10px; font-size:14px; min-height:18px; }
+    .msg.blink{
+      color:#fff;
+      background: rgba(220,38,38,.85);
+      padding:8px 10px;
+      border-radius:10px;
+      animation: blinkFlash .6s ease-in-out infinite;
+    }
+    @keyframes blinkFlash { 0%,100%{opacity:1;} 50%{opacity:.2;} }
+  </style>
+
+  <link rel="stylesheet" href="style.css"/>
+</head>
+
+<body>
+  <video class="bg-video" autoplay muted loop playsinline>
+    <source src="assets/bg.mp4" type="video/mp4">
+  </video>
+
+  <div class="page-bg">
+    <div class="card-box">
+      <div class="title">User Signup</div>
+
+      <label>Username</label>
+      <input
+        id="lu_user"
+        placeholder="Enter username"
+        maxlength="13"
+        pattern="^[A-Za-z]{1,13}$"
+        title="Username must be alphabets only (max 13)"
+        required
+      >
+
+      <label>Mobile Number</label>
+      <input id="u_mobile" maxlength="10" inputmode="numeric" placeholder="10 digit mobile" required>
+
+      <button class="btn btn-primary" id="genOtpBtn" type="button">Generate OTP</button>
+
+      <div id="otpSection" style="display:none; margin-top:10px;">
+        <label>Enter OTP</label>
+        <input id="otpInput" maxlength="6" inputmode="numeric" placeholder="Enter OTP" required>
+
+        <button class="btn btn-primary" id="verifyOtpBtn" type="button">Verify OTP</button>
+      </div>
+
+      <div id="passSection" style="display:none; margin-top:10px;">
+        <label>Password</label>
+        <input id="lu_pass" type="password" placeholder="Enter password" required>
+
+        <div class="showpass-row">
+          <input type="checkbox" id="showuserPass">
+          <label for="showuserPass">Show Password</label>
+        </div>
+
+        <button class="btn btn-primary" id="userSignupBtn" type="button">Sign Up</button>
+      </div>
+
+      <button class="btn linkbtn" onclick="location.href='user_login.html'">
+        Already have account? Login
+      </button>
+
+      <div class="msg" id="userSignupMsg"></div>
+    </div>
+  </div>
+
+<script>
+const NAME_RULE = /^[A-Za-z]{1,13}$/;
+const MOBILE_RULE = /^[0-9]{10}$/;
+const PASS_RULE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+const msgEl = document.getElementById("userSignupMsg");
+let msgTimer = null;
+
+function showMsg(text, isBlink=false){
+  msgEl.textContent = text;
+  msgEl.classList.remove("blink");
+  if(msgTimer) clearTimeout(msgTimer);
+
+  if(isBlink){
+    msgEl.classList.add("blink");
+    msgTimer = setTimeout(()=>{
+      msgEl.classList.remove("blink");
+      msgEl.textContent = "";
+    }, 6000);
+  }
+}
+
+const usernameEl = document.getElementById("lu_user");
+const mobileEl = document.getElementById("u_mobile");
+
+const otpSection = document.getElementById("otpSection");
+const otpInput = document.getElementById("otpInput");
+
+const passSection = document.getElementById("passSection");
+const passEl = document.getElementById("lu_pass");
+
+const genOtpBtn = document.getElementById("genOtpBtn");
+const verifyOtpBtn = document.getElementById("verifyOtpBtn");
+const signUpBtn = document.getElementById("userSignupBtn");
+
+let generatedOtp = null;
+let otpVerified = false;
+
+mobileEl.addEventListener("input", (e)=>{
+  e.target.value = e.target.value.replace(/[^0-9]/g,"").slice(0,10);
+});
+
+otpInput.addEventListener("input", (e)=>{
+  e.target.value = e.target.value.replace(/[^0-9]/g,"").slice(0,6);
+});
+
+// ✅ Generate OTP
+genOtpBtn.addEventListener("click", ()=>{
+  const username = usernameEl.value.trim();
+  const mobile = mobileEl.value.trim();
+
+  otpVerified = false;
+  passSection.style.display = "none";
+
+  if(!username || !mobile){
+    showMsg("Fill Username & Mobile first!", true);
+    return;
+  }
+  if(!NAME_RULE.test(username)){
+    showMsg("Username alphabets only (max 13).", true);
+    return;
+  }
+  if(!MOBILE_RULE.test(mobile)){
+    showMsg("Mobile must be exactly 10 digits.", true);
+    return;
+  }
+
+  generatedOtp = Math.floor(100000 + Math.random() * 900000);
+
+  // ❌ alert removed
+  showMsg("Your OTP is: " + generatedOtp + " ✅");
+
+  otpSection.style.display = "block";
+  otpInput.value = "";
+  otpInput.focus();
+});
+
+// ✅ Verify OTP
+verifyOtpBtn.addEventListener("click", ()=>{
+  const entered = otpInput.value.trim();
+
+  if(!generatedOtp){
+    showMsg("First click Generate OTP!", true);
+    return;
+  }
+  if(!entered){
+    showMsg("Enter OTP!", true);
+    return;
+  }
+  if(entered !== String(generatedOtp)){
+    showMsg("Wrong OTP ❌", true);
+    otpVerified = false;
+    passSection.style.display = "none";
+    return;
+  }
+
+  otpVerified = true;
+
+  // ❌ alert removed
+  showMsg("OTP Verified ✅ Now create password.");
+
+  passSection.style.display = "block";
+  passEl.focus();
+});
+
+// ✅ Sign Up
+signUpBtn.addEventListener("click", ()=>{
+  const username = usernameEl.value.trim();
+  const mobile = mobileEl.value.trim();
+  const password = passEl.value;
+
+  if(!otpVerified){
+    showMsg("Verify OTP first!", true);
+    return;
+  }
+  if(!PASS_RULE.test(password)){
+    showMsg("Password must be 8+ chars with Uppercase & number", true);
+    return;
+  }
+
+  localStorage.setItem("userCred", JSON.stringify({ username, mobile, password }));
+
+  showMsg("Signup saved ✅");
+
+  setTimeout(()=> location.href="user_details.html", 600);
+});
+
+document.getElementById("showuserPass").addEventListener("change", function(){
+  passEl.type = this.checked ? "text" : "password";
+});
+</script>
+
+</body>
+</html>

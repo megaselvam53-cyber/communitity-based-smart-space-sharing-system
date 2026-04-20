@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+  <style>
+    .msg { margin-top:10px; font-size:14px; min-height:18px; }
+.msg.blink{
+  color:#fff;
+  background: rgba(220,38,38,.85);
+  padding:8px 10px;
+  border-radius:10px;
+  animation: blinkFlash .6s ease-in-out infinite;
+}
+@keyframes blinkFlash { 0%,100%{opacity:1;} 50%{opacity:.2;} }
+  </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>User - Details</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  
+  <video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+  <div class="page-bg">
+    <div class="card-box">
+      <div class="title">User Details</div>
+
+      <div class="subtitle">Fill your basic details</div>
+      <label>Name</label>
+      <input id="name"
+        maxlength="13"
+        pattern="^[A-Za-z ]{1,13}$"
+        title="Alphabets only (max 13)"
+        placeholder="Enter name">
+
+      <label>Email (Gmail only)</label>
+      <input id="email"
+        type="email"
+        pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$"
+        title="Must be valid @gmail.com"
+        placeholder="Enter email">
+
+      <label>Phone Number</label>
+      <input id="phone"
+        maxlength="10"
+        inputmode="numeric"
+        pattern="[0-9]{10}"
+        title="Phone must be 10 digits"
+        placeholder="Enter phone">
+
+      <label>Address</label>
+      <textarea id="address" placeholder="Enter address"></textarea>
+
+      <button class="btn btn-primary" id="userDetailsSubmit">Submit</button>
+      <div class="msg" id="userDetailsMsg"></div>
+    </div>
+  </div>
+
+  <script>
+    const msgEl = document.getElementById("userDetailsMsg");
+    let msgTimer = null;
+
+    function showMsg(text, blink=false){
+      msgEl.textContent = text;
+      msgEl.classList.remove("blink");
+      if(msgTimer) clearTimeout(msgTimer);
+
+      if(blink){
+        msgEl.classList.add("blink");
+        msgTimer = setTimeout(()=>{
+          msgEl.classList.remove("blink");
+          msgEl.textContent = "";
+        }, 6000);
+      }
+    }
+
+    // ================= AUTO FILL ONLY FOR EDIT =================
+document.addEventListener("DOMContentLoaded", function(){
+
+  const isEdit = window.location.search.includes("edit=1");
+
+  if(!isEdit) return; // ❌ first time fill panna auto fill varadhu
+
+  const user = JSON.parse(localStorage.getItem("userProfile") || "null");
+
+  if(!user) return;
+
+  document.getElementById("name").value = user.name || "";
+  document.getElementById("email").value = user.email || "";
+  document.getElementById("phone").value = user.phone || "";
+  document.getElementById("address").value = user.address || "";
+
+});
+
+    document.getElementById("userDetailsSubmit").addEventListener("click", () => {
+
+      const data = {
+        name: document.getElementById("name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        address: document.getElementById("address").value.trim(),
+      };
+
+      if(!data.name || !data.email || !data.phone || !data.address){
+        showMsg("Fill all details!", true);
+        return;
+      }
+
+      // ✅ Name validation
+      if(!/^[A-Za-z ]{1,13}$/.test(data.name)){
+        showMsg("Name alphabets only (max 13)", true);
+        return;
+      }
+
+      // ✅ Email validation
+      if(!/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(data.email)){
+        showMsg("Email must be valid @gmail.com", true);
+        return;
+      }
+
+      // ✅ Phone validation
+      if(!/^\d{10}$/.test(data.phone)){
+        showMsg("Phone must be exactly 10 digits", true);
+        return;
+      }
+
+      localStorage.setItem("userProfile", JSON.stringify(data));
+      showMsg("Details saved ✅");
+
+      setTimeout(()=> location.href="user_dashboard.html",1000);
+    });
+
+    // ✅ Only numbers allow while typing
+    document.getElementById("phone").addEventListener("input", function(){
+      this.value = this.value.replace(/\D/g,"").slice(0,10);
+    });
+  </script>
+</body>
+</html>

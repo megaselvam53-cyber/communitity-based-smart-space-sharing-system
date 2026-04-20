@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Parking Details</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <style>
+    .imgbox{
+      width:100%;
+      height:180px;
+      border-radius:12px;
+      overflow:hidden;
+      margin-top:10px;
+      background:#f3f4f6;
+    }
+    .imgbox img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+  </style>
+</head>
+
+<body>
+
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="assets/bg.mp4" type="video/mp4">
+</video>
+
+<div class="page-bg">
+  <div class="card-box">
+
+    <div class="title">Parking Details</div>
+
+    <div id="info" class="section"></div>
+
+    <div class="imgbox">
+      <img id="photo" src="https://via.placeholder.com/700x350?text=Parking+Photo">
+    </div>
+
+    <div class="section" style="margin-top:10px;">
+      <div><b>User Feedback:</b> <span id="fb">No feedback yet</span></div>
+      <div style="margin-top:6px;"><b>Rating:</b> <span id="rt">No ratings</span> ⭐</div>
+    </div>
+
+    <button class="btn btn-primary" id="nextBtn">Next</button>
+
+    <button class="btn linkbtn"
+      onclick="location.href='find_parking.html'">
+      Back to Search
+    </button>
+
+  </div>
+</div>
+
+<script>
+
+// ================= STORAGE =================
+function getSpaces(){
+  return JSON.parse(localStorage.getItem("ownerSpaces") || "[]");
+}
+
+function saveSpaces(arr){
+  localStorage.setItem("ownerSpaces", JSON.stringify(arr));
+}
+
+function getRatings(){
+  return JSON.parse(localStorage.getItem("parkingRatings") || "[]");
+}
+
+// ================= INIT =================
+const nextBtn = document.getElementById("nextBtn");
+const infoBox = document.getElementById("info");
+const fbEl = document.getElementById("fb");
+const rtEl = document.getElementById("rt");
+
+const qp = new URLSearchParams(window.location.search);
+const pid  = qp.get("pid") || localStorage.getItem("selectedParkingId");
+const date = qp.get("date") || localStorage.getItem("selectedDate") || "";
+
+const spaces = getSpaces();
+const space = spaces.find(x => String(x.id) === String(pid));
+
+// ================= VALIDATION =================
+if(!pid || !space){
+  infoBox.innerHTML = `
+    <b>No parking selected.</b><br>
+    <small>Go back and click View button again.</small>
+  `;
+  nextBtn.disabled = true;
+}else{
+
+  // ✅ FIX: ONLY USE SPACE STATUS
+  const st = space.status || "AVAILABLE";
+
+  infoBox.innerHTML = `
+    <h3>${space.ownerName || "Owner"} - ${space.title || "Parking"}</h3>
+    <p><b>Date:</b> ${date || "-"}</p>
+    <p><b>Rate:</b> ₹${space.rate || 0}/hour</p>
+    <p><b>Size:</b> ${space.size || "-"}</p>
+    <p><b>Time:</b> ${space.time || "24/7"}</p>
+    <p><b>Status:</b> ${st}</p>
+  `;
+
+  document.getElementById("photo").src =
+    space.photo || "https://via.placeholder.com/700x350?text=Parking+Photo";
+
+  // ================= RATINGS =================
+  const ratings = getRatings().filter(
+    r => String(r.parkingId) === String(space.id)
+  );
+
+  if(ratings.length > 0){
+    const total = ratings.reduce((sum, r) => sum + Number(r.rating || 0), 0);
+    const avg = total / ratings.length;
+    const latest = ratings[ratings.length - 1];
+
+    rtEl.textContent = avg.toFixed(1);
+    fbEl.textContent = latest.feedback || "No written feedback";
+  }else{
+    rtEl.textContent = "No ratings";
+    fbEl.textContent = "No feedback yet";
+  }
+
+  localStorage.setItem("selectedParkingId", space.id);
+  localStorage.setItem("selectedDate", date);
+
+  // ================= NEXT BUTTON =================
+  nextBtn.addEventListener("click", ()=>{
+
+    let spaces = getSpaces();
+    const index = spaces.findIndex(
+      s => String(s.id) === String(space.id)
+    );
+
+    if(index === -1){
+      alert("Parking not found");
+      return;
+    }
+
+    // ✅ FIX: ONLY CHECK RESERVED
+    if(spaces[index].status === "RESERVED"){
+      alert("This parking is already reserved!");
+      return;
+    }
+
+    // ✅ KEEP OLD FLOW (ONLY RESERVED)
+    spaces[index].status = "RESERVED";
+    saveSpaces(spaces);
+
+    // ================= SAVE BOOKING =================
+    localStorage.setItem("bookingDraft", JSON.stringify({
+      pid: String(space.id),
+      date: String(date || ""),
+      title: space.title || "",
+      ownerName: space.ownerName || "",
+      rate: Number(space.rate || 0),
+      size: space.size || ""
+    }));
+
+    location.href =
+      `booking_confirm.html?pid=${encodeURIComponent(space.id)}&date=${encodeURIComponent(date)}`;
+  });
+
+}
+
+</script>
+
+</body>
+</html>

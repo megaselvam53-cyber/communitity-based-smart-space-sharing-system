@@ -49,20 +49,23 @@ Owners can also list their parking spaces and manage bookings.
 
 ---
 
-⚠️ Note
+⚠️ Current Limitations (Demo Version)
 
-This project currently uses localStorage for data handling (Frontend only).
-
-Backend integration (Node.js, Express.js, MongoDB) is planned for future development.
+- OTP is demo-based (shown on screen), not real-time SMS OTP
+- Data is stored using localStorage (no real database)
+- Application works only on the same device/browser
+- Multi-device access (e.g., two phones) is not supported currently
+- Payment system is simulation only (no real transactions)
 
 ---
 
 🚀 Future Enhancements
 
-- Real-time database integration
-- Online payment system
+- Real-time database integration (MongoDB / Firebase)
+- Real OTP system (SMS integration)
+- Online payment gateway integration
+- Multi-device support (access from multiple phones)
 - Live GPS tracking
-- Multi-user support
 - Cloud deployment
 
 ---
